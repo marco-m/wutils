@@ -65,18 +65,6 @@ public:
     { }
 };
 
-//urlpatterns = patterns('',
-//    url(r'^articles/2003/$',                  'news.views.specialcase2003'),
-//    url(r'^articles/(\d{4})/$',               'news.views.yeararchive'),
-//    url(r'^articles/(\d{4})/(\d{2})/$',       'news.views.montharchive'),
-//    url(r'^articles/(\d{4})/(\d{2})/(\d+)/$', 'news.views.articledetail'),
-//)
-//To capture a value from the URL, just put parenthesis around it.
-//A request to /articles/2005/03/ would match the third entry in the list.
-//Django would call the function
-//news.views.month_archive(request, '2005', '03').
-//Error handling
-//handler404
 /**
  * A regex-based URL router for Wt inspired by the smart Django "URLconf".
  * See https://docs.djangoproject.com/en/dev/topics/http/urls
@@ -92,104 +80,178 @@ public:
  *
  * Usage example:
  *
- * void specialcase2003();
- * void yeararchive(const std::string& arg1);
- * void montharchive(const std::string& arg1, const std::string& arg2);
- * void articledetail(const std::string& arg1, const std::string& arg2, const std::string& arg3);
+ * class View // probably inherit from a Wt view class
+ * {
+ *     void specialcase2003();
+ *     void yeararchive(const std::string& arg1);
+ *     void montharchive(const std::string& arg1, const std::string& arg2);
+ *     void articledetail(const std::string& arg1, const std::string& arg2,
+ *                        const std::string& arg3);
  *
- * UrlRouter* r = new UrlRouter(Wt::WApplication::instance());
+ *     UrlRouter<Mock>* _r;
  *
- * r->add("/articles/2003/",                     this, specialcase2003);
- * r->add("/articles/(\\d{4})/",                 this, yeararchive);
- * r->add("/articles/(\\d{4})/(\\d{2})/",        this, montharchive);
- * r->add("/articles/(\\d{4})/(\\d{2})/(\\d+)/", this, articledetail);
+ * View()
+ * {
+ * ...
+ *     _r = new UrlRouter<View>(Wt::WApplication::instance(), this);
+ *
+ *     _r->add("/articles/2003/",                     &View::specialcase2003);
+ *     _r->add("/articles/(\\d{4})/",                 &View::yeararchive);
+ *     _r->add("/articles/(\\d{4})/(\\d{2})/",        &View::montharchive);
+ *     _r->add("/articles/(\\d{4})/(\\d{2})/(\\d+)/", &View::articledetail);
+ * ...
+ * }
  *
  * To capture a value from the URL, put a grouping parenthesis around it.
+ * A request to /articles/2005/03/ would match the third entry in the list.
+ * The UrlRouter will call this->montharchive('2005', '03').
+ * Arguments are always captured as strings; it is up to the handler to do
+ * proper conversion if needed.
  *
- * Unfortunately, compared to the Python case, the patterns are uglier due
- * to C++ strings, that require to escape all backslashes.
- * Or, you can use C++11 raw literals, that avoid escaping backslashes at the
- * cost of adding confusion because they require an additional set of
+ * Compared to the Python case, the patterns are uglier due to the fact that
+ * C++ strings require to escape all backslashes.
+ * Or, you can use C++11 raw literals, thus avoiding escaping backslashes at
+ * the cost of some confusion because they require an additional set of
  * parenthesis that are _not_ part of the regex:
  *
- * r->add(R"(/articles/2003/)",                  specialcase2003);
- * r->add(R"(/articles/(\d{4})/)",               yeararchive);
- * r->add(R"(/articles/(\d{4})/(\d{2})/)",       montharchive);
- * r->add(R"(/articles/(\d{4})/(\d{2})/(\d+)/)", articledetail);
+ * r->add(R"(/articles/2003/)",                  &View::specialcase2003);
+ * r->add(R"(/articles/(\d{4})/)",               &View::yeararchive);
+ * r->add(R"(/articles/(\d{4})/(\d{2})/)",       &View::montharchive);
+ * r->add(R"(/articles/(\d{4})/(\d{2})/(\d+)/)", &View::articledetail);
  *
- * Captured arguments are always strings, no matter what kind of match the
- * regex does; it is up to the handler to do proper conversion if needed.
+ * In case of error in the usage of the API, it will throw an UrlRouterError
+ * exception.
  *
- * Note: a mismatch between the number of groups declared in the regex and the
- * number of arguments accepted by the handler can only be detected at
- * runtime.
+ * Error Handling
+ * TODO: default handler handler404? Add registration of error handlers?
+ *
+ * See also the UT for additional usage examples.
  */
+template<typename H>
 class UrlRouter : public Wt::WObject, private Uncopyable
 {
 public:
     /**
      * Construct an UrlRouter object. It must be created on the heap.
-     * @param parent The current WApplication, to which ownership will be
-     *               transferred. Must be non-null.
+     *
+     * @param parent  The current WApplication, to which ownership will be
+     *                transferred. Must be non-null.
+     * @param handler The handler object, normally a Wt view.
+     *
+     * @throw UrlRouterError if any of `parent` or `handler` is null.
      */
-    UrlRouter(Wt::WApplication* parent)
-        : Wt::WObject(parent)
+    UrlRouter(Wt::WApplication* parent, H* handler)
+        : Wt::WObject(parent),
+          _handler(handler)
     {
-        assert(parent != 0);
+        if (!parent)  { throw UrlRouterError("NULL parent"); }
+        if (!handler) { throw UrlRouterError("NULL handler"); }
+
         parent->internalPathChanged()
                 .connect(this, &UrlRouter::onInternalPathChange);
     }
 
     ~UrlRouter() {}
 
-    template<typename T>
-    void add(const std::string& pattern, T *obj,
-             void (T::* pm)())
+    /**
+     * Add method `pm` of the object `handler` (passed to the costructor)
+     * to be called if the incoming ULR matches `pattern`.
+     */
+    void add(const std::string& pattern,
+             void (H::* pm)())
     {
         std::regex regex(pattern);
         check_groups_args(regex.mark_count(), 0);
-        _handlers0.push_back(std::bind(pm, obj));
-        _regex2handler.push_back(std::make_pair(regex, _handlers0.size() - 1));
+        _handlers0.push_back(std::bind(pm, _handler));
+        _regex2handler.push_back(std::make_pair(regex, _handlers0.size()-1));
     }
 
-    template<typename T>
-    void add(const std::string& pattern, T *obj,
-             void (T::* pm)(const std::string& arg1))
+    /**
+     * Add method `pm` of the object `handler` (passed to the costructor)
+     * to be called if the incoming ULR matches `pattern`.
+     */
+    void add(const std::string& pattern,
+             void (H::* pm)(const std::string& arg1))
     {
         std::regex regex(pattern);
         check_groups_args(regex.mark_count(), 1);
-        _handlers1.push_back(std::bind(pm, obj, sph::_1));
-        _regex2handler.push_back(std::make_pair(regex, _handlers1.size() - 1));
+        _handlers1.push_back(std::bind(pm, _handler, sph::_1));
+        _regex2handler.push_back(std::make_pair(regex, _handlers1.size()-1));
     }
 
-    template<typename T>
-    void add(const std::string& pattern, T *obj,
-             void (T::* pm)(const std::string& arg1,
+    /**
+     * Add method `pm` of the object `handler` (passed to the costructor)
+     * to be called if the incoming ULR matches `pattern`.
+     */
+    void add(const std::string& pattern,
+             void (H::* pm)(const std::string& arg1,
                             const std::string& arg2))
     {
         std::regex regex(pattern);
         check_groups_args(regex.mark_count(), 2);
-        _handlers2.push_back(std::bind(pm, obj, sph::_1, sph::_2));
-        _regex2handler.push_back(std::make_pair(regex, _handlers2.size() - 1));
+        _handlers2.push_back(std::bind(pm, _handler, sph::_1, sph::_2));
+        _regex2handler.push_back(std::make_pair(regex, _handlers2.size()-1));
     }
 
-    template<typename T>
-    void add(const std::string& pattern, T *obj,
-             void (T::* pm)(const std::string& arg1,
+    /**
+     * Add method `pm` of the object `handler` (passed to the costructor)
+     * to be called if the incoming ULR matches `pattern`.
+     */
+    void add(const std::string& pattern,
+             void (H::* pm)(const std::string& arg1,
                             const std::string& arg2,
                             const std::string& arg3))
     {
         std::regex regex(pattern);
         check_groups_args(regex.mark_count(), 3);
-        _handlers3.push_back(std::bind(pm, obj, sph::_1, sph::_2, sph::_3));
-        _regex2handler.push_back(std::make_pair(regex, _handlers3.size() - 1));
+        _handlers3.push_back(std::bind(pm, _handler, sph::_1, sph::_2, sph::_3));
+        _regex2handler.push_back(std::make_pair(regex, _handlers3.size()-1));
     }
 
 
 private:
-    void onInternalPathChange(const std::string& path);
+    void onInternalPathChange(const std::string& path)
+    {
+        /*
+         * Iterate through the regexes in the same order as they have been added
+         * with add(). First match wins.
+         */
+        for (std::pair<std::regex, int>& p : _regex2handler) {
+            std::regex& re = p.first;
+            int index = p.second;
+            std::smatch sm;
+            if (std::regex_match(path, sm, re)) {
 
-    void check_groups_args(int groups, int args);
+                // Ugly, repetitive code because I don't know enough C++-fu...
+
+                int nArgs = re.mark_count();
+                if (nArgs == 0) {
+                    handler0_t f = _handlers0[index];
+                    f();
+                } else if (nArgs == 1) {
+                    handler1_t f = _handlers1[index];
+                    f(sm[1].str());
+                } else if (nArgs == 2) {
+                    handler2_t f = _handlers2[index];
+                    f(sm[1].str(), sm[2].str());
+                } else if (nArgs == 3) {
+                    handler3_t f = _handlers3[index];
+                    f(sm[1].str(), sm[2].str(), sm[3].str());
+                } else {
+                    assert(0 && "nArgs too big");
+                }
+                break;
+            }
+        }
+    }
+
+    void check_groups_args(int groups, int args)
+    {
+        if (groups != args) {
+            _oss << "regex groups: " << groups << " but args: " << args;
+            throw UrlRouterError(_oss.str());
+        }
+    }
 
 
     // Map a regex to the index in the _handlersN vector to find the
@@ -208,6 +270,8 @@ private:
     std::vector<handler1_t> _handlers1;
     std::vector<handler2_t> _handlers2;
     std::vector<handler3_t> _handlers3;
+
+    H* _handler;
 
     std::ostringstream _oss;
 };

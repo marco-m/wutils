@@ -34,25 +34,6 @@
 
 using testing::_;
 
-// Test fixture.
-class UrlRouterTest : public ::testing::Test
-{
-protected:
-    virtual void SetUp() {
-        _env = new Wt::Test::WTestEnvironment("/", "./wt_config.xml");
-        _app = new Wt::WApplication(*_env);
-        _r = new WU::UrlRouter(_app);
-    }
-    virtual void TearDown() {
-        // _r is deleted by _app.
-        delete _app;
-        delete _env;
-    }
-    Wt::Test::WTestEnvironment* _env;
-    Wt::WApplication*           _app;
-    WU::UrlRouter*              _r;
-};
-
 /*
  * This is a dummy class containing handlers for the various Urls.
  * In production, it would probably inherit from Wt::WObject.
@@ -61,7 +42,7 @@ protected:
  * need for this class to have virtual methods (as is normally required by
  * googlemock).
  */
-class DummyViewer
+class DummyView
 {
 public:
     void handler0a() { }
@@ -74,7 +55,7 @@ public:
                   const std::string& arg3) { }
 };
 
-class MockViewer : public DummyViewer
+class Mock : public DummyView
 {
 public:
     MOCK_METHOD0(handler0a, void ());
@@ -87,89 +68,97 @@ public:
                                  const std::string&));
 };
 
+// Test fixture.
+class UrlRouterTest : public ::testing::Test
+{
+protected:
+    virtual void SetUp() {
+        _env = new Wt::Test::WTestEnvironment("/", "./wt_config.xml");
+        _app = new Wt::WApplication(*_env);
+        _mv = new Mock();
+        _r = new WU::UrlRouter<Mock>(_app, _mv);
+    }
+    virtual void TearDown() {
+        // _r is deleted by _app.
+        delete _mv;
+        delete _app;
+        delete _env;
+    }
+    Wt::Test::WTestEnvironment* _env;
+    Wt::WApplication*           _app;
+    Mock*                       _mv;
+    WU::UrlRouter<Mock>*        _r;
+};
+
+
 TEST_F(UrlRouterTest, EmptyRegex) {
-    MockViewer mv;
-    EXPECT_NO_THROW(_r->add("", &mv, &MockViewer::handler0a));
-    EXPECT_THROW(_r->add("", &mv, &MockViewer::handler1), WU::UrlRouterError);
-    EXPECT_THROW(_r->add("", &mv, &MockViewer::handler2), WU::UrlRouterError);
+    EXPECT_NO_THROW(_r->add("", &Mock::handler0a));
+    EXPECT_THROW(_r->add("", &Mock::handler1), WU::UrlRouterError);
+    EXPECT_THROW(_r->add("", &Mock::handler2), WU::UrlRouterError);
 }
 
 TEST_F(UrlRouterTest, OneGroup) {
-    MockViewer mv;
-    EXPECT_THROW(_r->add("()", &mv, &MockViewer::handler0a), WU::UrlRouterError);
-    EXPECT_NO_THROW(_r->add("()", &mv, &MockViewer::handler1));
-    EXPECT_THROW(_r->add("()", &mv, &MockViewer::handler2), WU::UrlRouterError);
+    EXPECT_THROW(_r->add("()", &Mock::handler0a), WU::UrlRouterError);
+    EXPECT_NO_THROW(_r->add("()", &Mock::handler1));
+    EXPECT_THROW(_r->add("()", &Mock::handler2), WU::UrlRouterError);
 }
 
 TEST_F(UrlRouterTest, TwoGroups) {
-    MockViewer mv;
-    EXPECT_THROW(_r->add("()()", &mv, &MockViewer::handler0a), WU::UrlRouterError);
-    EXPECT_THROW(_r->add("()()", &mv, &MockViewer::handler1), WU::UrlRouterError);
-    EXPECT_NO_THROW(_r->add("()()", &mv, &MockViewer::handler2));
+    EXPECT_THROW(_r->add("()()", &Mock::handler0a), WU::UrlRouterError);
+    EXPECT_THROW(_r->add("()()", &Mock::handler1), WU::UrlRouterError);
+    EXPECT_NO_THROW(_r->add("()()", &Mock::handler2));
 }
 
 TEST_F(UrlRouterTest, Match0Groups1Match) {
-    MockViewer mv;
-    _r->add("/pippo", &mv, &MockViewer::handler0a);
-    EXPECT_CALL(mv, handler0a()).Times(1);
-    EXPECT_CALL(mv, handler1(_)).Times(0);
-    EXPECT_CALL(mv, handler2(_, _)).Times(0);
+    _r->add("/pippo", &Mock::handler0a);
+    EXPECT_CALL(*_mv, handler0a()).Times(1);
+    EXPECT_CALL(*_mv, handler1(_)).Times(0);
+    EXPECT_CALL(*_mv, handler2(_, _)).Times(0);
     _app->setInternalPath("/pippo", true);
 }
 
 TEST_F(UrlRouterTest, Match0GroupsNMatches) {
-    MockViewer mv;
-    _r->add("/pippo", &mv, &MockViewer::handler0a);
-    _r->add("/pluto", &mv, &MockViewer::handler0b);
-    _r->add("/paperino", &mv, &MockViewer::handler0a);
-    EXPECT_CALL(mv, handler0a()).Times(2);
-    EXPECT_CALL(mv, handler0b()).Times(1);
-    EXPECT_CALL(mv, handler1(_)).Times(0);
-    EXPECT_CALL(mv, handler2(_, _)).Times(0);
+    _r->add("/pippo", &Mock::handler0a);
+    _r->add("/pluto", &Mock::handler0b);
+    _r->add("/paperino", &Mock::handler0a);
+    EXPECT_CALL(*_mv, handler0a()).Times(2);
+    EXPECT_CALL(*_mv, handler0b()).Times(1);
+    EXPECT_CALL(*_mv, handler1(_)).Times(0);
+    EXPECT_CALL(*_mv, handler2(_, _)).Times(0);
     _app->setInternalPath("/pluto", true);
     _app->setInternalPath("/pippo", true);
     _app->setInternalPath("/paperino", true);
 }
 
 TEST_F(UrlRouterTest, NoMatch) {
-    MockViewer mv;
-    _r->add("/pippo", &mv, &MockViewer::handler0a);
-    _r->add("/pluto", &mv, &MockViewer::handler0b);
-    _r->add("/foo/(bar)", &mv, &MockViewer::handler1);
-    _r->add("/(foo)/(bar)", &mv, &MockViewer::handler2);
-    EXPECT_CALL(mv, handler0a()).Times(0);
-    EXPECT_CALL(mv, handler0b()).Times(0);
-    EXPECT_CALL(mv, handler1(_)).Times(0);
-    EXPECT_CALL(mv, handler2(_, _)).Times(0);
+    _r->add("/pippo", &Mock::handler0a);
+    _r->add("/pluto", &Mock::handler0b);
+    _r->add("/foo/(bar)", &Mock::handler1);
+    _r->add("/(foo)/(bar)", &Mock::handler2);
+    EXPECT_CALL(*_mv, handler0a()).Times(0);
+    EXPECT_CALL(*_mv, handler0b()).Times(0);
+    EXPECT_CALL(*_mv, handler1(_)).Times(0);
+    EXPECT_CALL(*_mv, handler2(_, _)).Times(0);
     _app->setInternalPath("/foo", true);
     _app->setInternalPath("/bar", true);
     _app->setInternalPath("/p/ippo", true);
     _app->setInternalPath("/pluto/", true);
 }
 
-//TEST_F(UrlRouterTest, SimplerAPI) {
-//    MockViewer mv;
-//    WU::UrlRouter* r = new WU::UrlRouter<MockView>(*app, mv);
-//    // No reason to pass the object on each add!!!!
-//    r->add("/articles/(\\d{4})/", &MockViewer::handler1);
-
-//}
-
 TEST_F(UrlRouterTest, SomeMatchesAsPython) {
-    MockViewer mv;
-    _r->add("/articles/(\\d{4})/",                 &mv, &MockViewer::handler1);
-    _r->add("/articles/(\\d{4})/(\\d{2})/",        &mv, &MockViewer::handler2);
-    _r->add("/articles/(\\d{4})/(\\d{2})/(\\d+)/", &mv, &MockViewer::handler3);
+    _r->add("/articles/(\\d{4})/",                 &Mock::handler1);
+    _r->add("/articles/(\\d{4})/(\\d{2})/",        &Mock::handler2);
+    _r->add("/articles/(\\d{4})/(\\d{2})/(\\d+)/", &Mock::handler3);
     // C++11 raw literals are good (no need to escape backslash \) but
     // confusing for regex: they add another set of parenthesis ()
-    _r->add(R"(/articles/(\d{4})/(\d{2})/(\d+)/)", &mv, &MockViewer::handler3);
-    EXPECT_CALL(mv, handler1("1999")).Times(1);
-    EXPECT_CALL(mv, handler1("1984")).Times(1);
-    EXPECT_CALL(mv, handler2("1999", "04")).Times(1);
-    EXPECT_CALL(mv, handler2("1984", "12")).Times(1);
-    EXPECT_CALL(mv, handler3("2014", "03", "1")).Times(1);
-    EXPECT_CALL(mv, handler3("2014", "03", "1234")).Times(1);
-    EXPECT_CALL(mv, handler3("2014", "03", "-1")).Times(0);
+    //_r->add(R"(/articles/(\d{4})/(\d{2})/(\d+)/)", &Mock::handler3);
+    EXPECT_CALL(*_mv, handler1("1999")).Times(1);
+    EXPECT_CALL(*_mv, handler1("1984")).Times(1);
+    EXPECT_CALL(*_mv, handler2("1999", "04")).Times(1);
+    EXPECT_CALL(*_mv, handler2("1984", "12")).Times(1);
+    EXPECT_CALL(*_mv, handler3("2014", "03", "1")).Times(1);
+    EXPECT_CALL(*_mv, handler3("2014", "03", "1234")).Times(1);
+    EXPECT_CALL(*_mv, handler3("2014", "03", "-1")).Times(0);
     _app->setInternalPath("/articles/1999/", true);
     _app->setInternalPath("/articles/1999/04/", true);
     _app->setInternalPath("/articles/1984/", true);
@@ -181,7 +170,7 @@ TEST_F(UrlRouterTest, SomeMatchesAsPython) {
 
 //TEST_F(UrlRouterTest, FirstMatchWins) {
 //    MockViewer mv;
-//    _r->add("/pippo", &mv, &MockViewer::handler0);
+//    _r->add("/pippo", &mv, &Mocker::handler0);
 //}
 
 //TEST_F(UrlRouterTest, PathTooLong)

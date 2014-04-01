@@ -63,9 +63,8 @@ include_directories(${GTEST_INCLUDE_DIRS})
 #
 include_directories(${CMAKE_SOURCE_DIR})
 
-add_library(wutils
-    urlrouter.cpp
-)
+#add_library(wutils
+#)
 
 #
 # Build tests.
