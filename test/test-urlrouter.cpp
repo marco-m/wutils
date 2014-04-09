@@ -146,12 +146,11 @@ TEST_F(UrlRouterTest, NoMatch) {
 }
 
 TEST_F(UrlRouterTest, SomeMatchesAsPython) {
-    _r->add("/articles/(\\d{4})/",                 &Mock::handler1);
-    _r->add("/articles/(\\d{4})/(\\d{2})/",        &Mock::handler2);
-    _r->add("/articles/(\\d{4})/(\\d{2})/(\\d+)/", &Mock::handler3);
     // C++11 raw literals are good (no need to escape backslash \) but
-    // confusing for regex: they add another set of parenthesis ()
-    //_r->add(R"(/articles/(\d{4})/(\d{2})/(\d+)/)", &Mock::handler3);
+    // confusing for regex: they add another set of parenthesis.
+    _r->add(R"(/articles/(\d{4})/)",               &Mock::handler1);
+    _r->add(R"(/articles/(\d{4})/(\d{2})/)",       &Mock::handler2);
+    _r->add(R"(/articles/(\d{4})/(\d{2})/(\d+)/)", &Mock::handler3);
     EXPECT_CALL(*_mv, handler1("1999")).Times(1);
     EXPECT_CALL(*_mv, handler1("1984")).Times(1);
     EXPECT_CALL(*_mv, handler2("1999", "04")).Times(1);

@@ -1,4 +1,10 @@
 
+rebuild gmock with -std=c++11 and libc++
+
+CXX=clang++3.4 cmake -DCMAKE_CXX_FLAGS="-std=c++11 -stdlib=libc++"  ../source
+
+Investigate behive as an alternative to travis.
+
 
 Error Handling
 TODO: default handler handler404? Add registration of error handlers?

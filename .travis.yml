@@ -1,0 +1,56 @@
+# .travis.yml for wutils
+
+# Set environment variables. TRAVIS is always set.
+#env: DB=postgres
+
+# Travis has Ubuntu 12.04 (precise pangolin), which ships with gcc 4.6, libstdc++6-4.4 and
+# no clang. We want gcc 4.8 and clang, because we want something modern that
+# supports C++11 properly.
+
+# See also https://github.com/travis-ci-tester/travis-test-clang-cxx-11
+# See also http://stackoverflow.com/questions/22111549/travis-ci-with-clang-3-4-and-c11?rq=1
+
+language: cpp
+compiler:
+#    - gcc
+    - clang
+
+before_install:
+    - sudo apt-get -q update
+# to be sure we get add-apt-repository
+    - sudo apt-get install python-software-properties
+# libstdc++-4.8-dev, works but useless because g++4.8 has a broken std::regex
+#    - sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test
+# to get a more recent boost, since the 12.04 breaks with g++ 4.8
+    - sudo add-apt-repository --yes  ppa:boost-latest/ppa
+# clang++-3.4
+#    - sudo add-apt-repository --yes ppa:h-rayflood/llvm
+
+# clang 3.4 take 2
+    - sudo add-apt-repository --yes "deb http://llvm.org/apt/precise/ llvm-toolchain-precise main"
+    #- sudo add-apt-repository --yes "deb-src http://llvm.org/apt/precise/ llvm-toolchain-precise main"
+    # 3.4
+    - sudo add-apt-repository --yes "deb http://llvm.org/apt/precise/ llvm-toolchain-precise-3.4 main"
+    #- sudo add-apt-repository --yes "deb-src http://llvm.org/apt/precise/ llvm-toolchain-precise-3.4 main"
+    # Common
+    - sudo add-apt-repository --yes "deb http://ppa.launchpad.net/ubuntu-toolchain-r/test/ubuntu precise main"
+
+    - sudo apt-get -q update
+install:
+# wt dependencies:
+    - sudo apt-get install -q libboost-random1.55-dev libboost-date-time1.55-dev libboost-regex1.55-dev libboost-program-options1.55-dev libboost-signals1.55-dev libboost-system1.55-dev libboost-filesystem1.55-dev libboost-thread1.55-dev
+# wutils dependencies:
+    - sudo apt-get install -q cmake p7zip-full
+    - sudo apt-get install clang-3.4
+#    - sudo apt-get install -q g++-4.8
+    - export CXX="clang++-3.4"
+    - mkdir build && cd build
+    - ../scripts/get-gmock.sh && ../scripts/get-wt.sh
+
+script:
+    - cmake -DGMOCK_DIR=./gmock-download/install -DWT_DIR=./wt-download/install ..
+    - make
+    - cd test && ./test-urlrouter
+
+
+
