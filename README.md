@@ -19,7 +19,7 @@ Requirements
 
 Any platform with a decent C++11 compiler.
 
-* g++: at least g++ 4.9 (unfortunately g++ 4.8 has a [non-working std::regex][g++ broken regex])
+* g++: at least g++ 4.8
 * clang++: 3.4
 
 Build
@@ -47,6 +47,12 @@ License
 WUtils is released under the the BSD 2-clause license (see file LICENSE.txt).
 
 Pull requests appreciated.
+
+Why boost::regex and not std::regex?
+------------------------------------
+
+My first implementation was with std::regex and clang++. It worked perfectly. But, on the g++ side, the first working std::regex comes with g++ 4.9, which is too new ([g++ 4.8 and regex][g++ broken regex]). Then I attempted to support both std::regex and boost::regex, but guess what? They are incompatible. So I gave up and switched to boost::regex, to make WUtils usable to a wider audience. It is not really an additional dependency since Wt itself uses boost::regex internally.
+
 
 [Wt]: http://www.webtoolkit.eu/wt
 [Django URLconf]: https://docs.djangoproject.com/en/dev/topics/http/urls

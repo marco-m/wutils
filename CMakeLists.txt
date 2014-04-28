@@ -4,8 +4,6 @@ project(wutils CXX)
 cmake_minimum_required(VERSION 2.8.7) # Travis supports only this old cmake
 message(STATUS "Entering project ${PROJECT_NAME}")
 message(STATUS "Using cmake version ${CMAKE_VERSION}")
-message(STATUS "Running on ${CMAKE_HOST_SYSTEM} ${CMAKE_HOST_SYSTEM_PROCESSOR}"
-    " ${CMAKE_LIBRARY_ARCHITECTURE}")
 
 ########### BEGIN User-settable configuration ############
 
@@ -35,8 +33,9 @@ else()
     message(FATAL_ERROR "The C++ compiler has no C++11 support.")
 endif()
 
+# Boost still uses the "register" keyword, tell clang to relax.
 set(GNU_CXX_FLAGS
-    " -W -Wall -Wextra -Wno-unused-parameter"
+    " -W -Wall -Wextra -Wno-unused-parameter -Wno-deprecated-register"
     " -O0 -g -pipe ${CXX11_FLAG}"
 )
 string(REPLACE ";" "" GNU_CXX_FLAGS ${GNU_CXX_FLAGS})
@@ -54,7 +53,8 @@ endif()
 
 
 #
-# Find Boost (needed by Wt).
+# Find Boost (needed by Wt and WUtils).
+#
 find_package(Boost 1.54.0 REQUIRED COMPONENTS signals system regex)
 include_directories(${Boost_INCLUDE_DIRS})
 

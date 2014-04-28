@@ -30,7 +30,8 @@
 #include <Wt/WObject>
 #include <Wt/WApplication>
 
-#include <regex>
+#include <boost/regex.hpp>
+
 #include <functional>
 #include <string>
 #include <vector>
@@ -67,7 +68,7 @@ It reacts to the internalPathChanged() signal of the Wt::WApplication set as its
 and routes to the **first** matching handler, so the **order** of the calls to add() is
 important.
 
-The regex string must be a valid std::regex() regex.
+The regex string must be a valid regex from boost::regex.
 
 Since its ownership is transferred to the current WApplication, it must be created on the
 heap.
@@ -155,7 +156,7 @@ public:
     void add(const std::string& pattern,
              void (H::* pm)())
     {
-        std::regex regex(pattern);
+        boost::regex regex(pattern);
         check_groups_args(regex.mark_count(), 0);
         _handlers0.push_back(std::bind(pm, _handler));
         _regex2handler.push_back(std::make_pair(regex, _handlers0.size()-1));
@@ -169,7 +170,7 @@ public:
     void add(const std::string& pattern,
              void (H::* pm)(const std::string& arg1))
     {
-        std::regex regex(pattern);
+        boost::regex regex(pattern);
         check_groups_args(regex.mark_count(), 1);
         _handlers1.push_back(std::bind(pm, _handler, sph::_1));
         _regex2handler.push_back(std::make_pair(regex, _handlers1.size()-1));
@@ -184,7 +185,7 @@ public:
              void (H::* pm)(const std::string& arg1,
                             const std::string& arg2))
     {
-        std::regex regex(pattern);
+        boost::regex regex(pattern);
         check_groups_args(regex.mark_count(), 2);
         _handlers2.push_back(std::bind(pm, _handler, sph::_1, sph::_2));
         _regex2handler.push_back(std::make_pair(regex, _handlers2.size()-1));
@@ -200,7 +201,7 @@ public:
                             const std::string& arg2,
                             const std::string& arg3))
     {
-        std::regex regex(pattern);
+        boost::regex regex(pattern);
         check_groups_args(regex.mark_count(), 3);
         _handlers3.push_back(std::bind(pm, _handler, sph::_1, sph::_2, sph::_3));
         _regex2handler.push_back(std::make_pair(regex, _handlers3.size()-1));
@@ -218,15 +219,15 @@ private:
          * Iterate through the regexes in the same order as they have been added
          * with add(). First match wins.
          */
-        for (std::pair<std::regex, int>& p : _regex2handler) {
-            std::regex& re = p.first;
+        for (std::pair<boost::regex, int>& p : _regex2handler) {
+            boost::regex& re = p.first;
             int index = p.second;
-            std::smatch sm;
-            if (std::regex_match(path, sm, re)) {
+            boost::smatch sm;
+            if (boost::regex_match(path, sm, re)) {
 
                 // Ugly, repetitive code because I don't know enough C++-fu...
 
-                int nArgs = re.mark_count();
+                const int nArgs = re.mark_count() - 1;
                 if (nArgs == 0) {
                     handler0_t f = _handlers0[index];
                     f();
@@ -249,6 +250,7 @@ private:
 
     void check_groups_args(int groups, int args)
     {
+        groups -= 1;
         if (groups != args) {
             _oss << "regex groups: " << groups << " but args: " << args;
             throw UrlRouterError(_oss.str());
@@ -258,7 +260,7 @@ private:
 
     // Map a regex to the index in the _handlersN vector to find the
     // corresponding handler.
-    std::vector<std::pair<std::regex, int> > _regex2handler;
+    std::vector<std::pair<boost::regex, int> > _regex2handler;
 
     typedef std::function<void ()>                        handler0_t;
     typedef std::function<void (const std::string& arg1)> handler1_t;
