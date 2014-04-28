@@ -1,19 +1,26 @@
-WUtils
+WUtils {#mainpage}
 ======
 
-[![Build Status](https://travis-ci.org/marco-m/wutils.svg)](https://travis-ci.org/marco-m/wutils)
+WUtils is a set of cross-platform C++11 utility classes for the [Wt] C++ web framework.
 
-WUtils is a set of C++11 utility classes for the Wt C++/JavaScript web framework.
-I am not associated with Wt (Wt: http://www.webtoolkit.eu/wt) or Emweb, but I like it :-)
+This library is developed following modern practices:
 
-The code needs a C++11 compiler, at least g++ 4.9 (unfortunately g++ 4.8 has a non-working std::regex) or clang 3.4.
+* Test Driven Development; comes with a full UT suite.
+* Continuous Integration; each commit is built and tested on: Mac OS X 10.9, Linux XXX, FreeBSD YYY, [Travis CI].
 
-Usage and documentation
------------------------
+Contents
+--------
 
-Urlrouter: A regex-based URL router for Wt inspired by the smart Django "URLconf". See https://docs.djangoproject.com/en/dev/topics/http/urls
+* WU::UrlRouter: A regex-based URL router/dispatcher for Wt inspired by the smart [Django URLconf].
+* `test` directory: extensive Unit Tests.
 
-See also the comments in `urlrouter.hpp` and the files in the `test` directory.
+Requirements
+------------
+
+Any platform with a decent C++11 compiler.
+
+* g++: at least g++ 4.9 (unfortunately g++ 4.8 has a [non-working std::regex][g++ broken regex])
+* clang++: 3.4
 
 Build
 -----
@@ -32,11 +39,7 @@ Known issues
 
 * This is innocuous and has been fixed in wt after the release.
 
-    test-urlrouter.cpp:85:16: warning: deleting object of polymorphic class type ‘Wt::Test::WTestEnvironment’ which has non-virtual destructor might cause undefined behaviour [-Wdelete-non-virtual-dtor]
-
-
-* g++ 4.8 comes with broken std::regex (http://gcc.gnu.org/bugzilla/show_bug.cgi?id=53631), so you need either clang 3.4+ or g++ 4.9+
-
+    test-urlrouter.cpp:85:16: warning: deleting object of polymorphic class type Wt::Test::WTestEnvironment which has non-virtual destructor might cause undefined behaviour [-Wdelete-non-virtual-dtor]
 
 License
 -------
@@ -44,3 +47,8 @@ License
 WUtils is released under the the BSD 2-clause license (see file LICENSE.txt).
 
 Pull requests appreciated.
+
+[Wt]: http://www.webtoolkit.eu/wt
+[Django URLconf]: https://docs.djangoproject.com/en/dev/topics/http/urls
+[Travis CI]: https://travis-ci.org/marco-m/wutils
+[g++ broken regex]: http://gcc.gnu.org/bugzilla/show_bug.cgi?id=53631

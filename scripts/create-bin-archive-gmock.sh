@@ -8,7 +8,7 @@ FILE=gmock-${VERSION}.zip
 URL=https://googlemock.googlecode.com/files/${FILE}
 BASEDIR=gmock-download
 SRCDIR=gmock-${VERSION}
-BIN_ARCHIVE=gmock-${VERSION}-bin-ubu-1204.7z
+BIN_ARCHIVE=gmock-clang-libc++-${VERSION}-bin-ubu-1204.7z
 
 echo
 echo "*** Working directory: `pwd`"

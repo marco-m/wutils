@@ -47,16 +47,10 @@ namespace WU {
 // Needed because some Wt include file brings in boost::placeholders clash.
 namespace sph = std::placeholders;
 
-// From Scott Meyers, "Effective C++".
-class Uncopyable {
-protected:
-    Uncopyable() {}
-    ~Uncopyable() {}
-private:
-    Uncopyable(const Uncopyable&);
-    Uncopyable& operator=(const Uncopyable&);
-};
+/**
+Exception thrown in case of error by UrlRouter operations.
 
+ */
 class UrlRouterError : public std::runtime_error
 {
 public:
@@ -66,69 +60,69 @@ public:
 };
 
 /**
- * A regex-based URL router for Wt inspired by the smart Django "URLconf".
- * See https://docs.djangoproject.com/en/dev/topics/http/urls
- *
- * It reacts to the internalPathChanged() signal of the Wt::WApplication
- * set as its parent and routes to the **first** matching handler, so the
- * **order** of the calls to add() is important.
- *
- * The regex string must be a valid std::regex() regex.
- *
- * Since its ownership is transferred to the current WApplication, it must be
- * created on the heap.
- *
- * Usage example:
- *
- * class View // probably inherit from a Wt view class
- * {
- *     void specialcase2003();
- *     void yeararchive(const std::string& arg1);
- *     void montharchive(const std::string& arg1, const std::string& arg2);
- *     void articledetail(const std::string& arg1, const std::string& arg2,
- *                        const std::string& arg3);
- *
- *     UrlRouter<Mock>* _r;
- *
- * View()
- * {
- * ...
- *     _r = new UrlRouter<View>(Wt::WApplication::instance(), this);
- *
- *     _r->add("/articles/2003/",                     &View::specialcase2003);
- *     _r->add("/articles/(\\d{4})/",                 &View::yeararchive);
- *     _r->add("/articles/(\\d{4})/(\\d{2})/",        &View::montharchive);
- *     _r->add("/articles/(\\d{4})/(\\d{2})/(\\d+)/", &View::articledetail);
- * ...
- * }
- *
- * To capture a value from the URL, put a grouping parenthesis around it.
- * A request to /articles/2005/03/ would match the third entry in the list.
- * The UrlRouter will call this->montharchive('2005', '03').
- * Arguments are always captured as strings; it is up to the handler to do
- * proper conversion if needed.
- *
- * Compared to the Python case, the patterns are uglier due to the fact that
- * C++ strings require to escape all backslashes.
- * Or, you can use C++11 raw literals, thus avoiding escaping backslashes at
- * the cost of some confusion because they require an additional set of
- * parenthesis that are _not_ part of the regex:
- *
- * r->add(R"(/articles/2003/)",                  &View::specialcase2003);
- * r->add(R"(/articles/(\d{4})/)",               &View::yeararchive);
- * r->add(R"(/articles/(\d{4})/(\d{2})/)",       &View::montharchive);
- * r->add(R"(/articles/(\d{4})/(\d{2})/(\d+)/)", &View::articledetail);
- *
- * In case of error in the usage of the API, it will throw an UrlRouterError
- * exception.
- *
- * Error Handling
- * TODO: default handler handler404? Add registration of error handlers?
- *
- * See also the UT for additional usage examples.
+A regex-based URL router/dispatcher for Wt inspired by the smart [Django URLconf]
+(https://docs.djangoproject.com/en/dev/topics/http/urls).
+
+It reacts to the internalPathChanged() signal of the Wt::WApplication set as its parent
+and routes to the **first** matching handler, so the **order** of the calls to add() is
+important.
+
+The regex string must be a valid std::regex() regex.
+
+Since its ownership is transferred to the current WApplication, it must be created on the
+heap.
+
+Usage example:
+
+~~~
+class View // probably inherit from a Wt view class
+{
+    void specialcase2003();
+    void yeararchive(const std::string& arg1);
+    void montharchive(const std::string& arg1, const std::string& arg2);
+    void articledetail(const std::string& arg1, const std::string& arg2,
+                       const std::string& arg3);
+
+    UrlRouter<Mock>* _r;
+
+View()
+{
+...
+     _r = new UrlRouter<View>(Wt::WApplication::instance(), this);
+     _r->add("/articles/2003/",                     &View::specialcase2003);
+     _r->add("/articles/(\\d{4})/",                 &View::yeararchive);
+     _r->add("/articles/(\\d{4})/(\\d{2})/",        &View::montharchive);
+     _r->add("/articles/(\\d{4})/(\\d{2})/(\\d+)/", &View::articledetail);
+...
+}
+~~~
+
+To capture a value from the URL, put a grouping parenthesis around it. A request to
+`/articles/2005/03/` would match the third entry in the list. The UrlRouter will call
+`this->montharchive('2005', '03')`. Arguments are always captured as strings; it is up to
+the handler to do proper conversion if needed.
+
+Compared to the Python case, the patterns are uglier due to the fact that C++ strings
+require to escape all backslashes. An alternative is to use C++11 raw literals, thus
+avoiding escaping backslashes at the cost of some confusion because they require an
+additional set of parenthesis that are _not_ part of the regex:
+
+~~~
+r->add(R"(/articles/2003/)",                  &View::specialcase2003);
+r->add(R"(/articles/(\d{4})/)",               &View::yeararchive);
+r->add(R"(/articles/(\d{4})/(\d{2})/)",       &View::montharchive);
+r->add(R"(/articles/(\d{4})/(\d{2})/(\d+)/)", &View::articledetail);
+~~~
+
+In case of error in the usage of the API, it will throw an UrlRouterError exception.
+
+Error Handling
+TODO: default handler handler404? Add registration of error handlers?
+
+See also the UT for additional usage examples.
  */
 template<typename H>
-class UrlRouter : public Wt::WObject, private Uncopyable
+class UrlRouter : public Wt::WObject
 {
 public:
     /**
@@ -155,7 +149,8 @@ public:
 
     /**
      * Add method `pm` of the object `handler` (passed to the costructor)
-     * to be called if the incoming ULR matches `pattern`.
+     * to be called if the incoming ULR matches `pattern`, where `pattern` has 0
+     * matching groups.
      */
     void add(const std::string& pattern,
              void (H::* pm)())
@@ -168,7 +163,8 @@ public:
 
     /**
      * Add method `pm` of the object `handler` (passed to the costructor)
-     * to be called if the incoming ULR matches `pattern`.
+     * to be called if the incoming ULR matches `pattern`, where `pattern` has 1
+     * matching group. The matching groups will be passed as arguments of `pm`.
      */
     void add(const std::string& pattern,
              void (H::* pm)(const std::string& arg1))
@@ -181,7 +177,8 @@ public:
 
     /**
      * Add method `pm` of the object `handler` (passed to the costructor)
-     * to be called if the incoming ULR matches `pattern`.
+     * to be called if the incoming ULR matches `pattern`, where `pattern` has 2
+     * matching groups. The matching groups will be passed as arguments of `pm`.
      */
     void add(const std::string& pattern,
              void (H::* pm)(const std::string& arg1,
@@ -195,7 +192,8 @@ public:
 
     /**
      * Add method `pm` of the object `handler` (passed to the costructor)
-     * to be called if the incoming ULR matches `pattern`.
+     * to be called if the incoming ULR matches `pattern`, where `pattern` has 3
+     * matching groups. The matching groups will be passed as arguments of `pm`.
      */
     void add(const std::string& pattern,
              void (H::* pm)(const std::string& arg1,
@@ -210,6 +208,10 @@ public:
 
 
 private:
+    // Make it uncopiable.
+    UrlRouter(const UrlRouter&);
+    UrlRouter& operator=(const UrlRouter&);
+
     void onInternalPathChange(const std::string& path)
     {
         /*

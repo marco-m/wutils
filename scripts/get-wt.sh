@@ -10,7 +10,7 @@ set -o errexit
 VERSION=3.3.2
 SHA256="7bc59ab471d11d4cfe1e0b16ed68a199553947b07a31623be5316efcb4848b84  wt-3.3.2-bin-ubu-1204.7z"
 FILE=wt-${VERSION}-bin-ubu-1204.7z
-URL=http://freefr.dl.sourceforge.net/project/wutils/travis-ci/${FILE}
+URL=http://sourceforge.net/projects/wutils/files/travis-ci/${FILE}/download
 BASEDIR=wt-download
 SRCDIR=wt-${VERSION}
 
@@ -20,7 +20,7 @@ echo "*** Working directory: `pwd`"
 mkdir -p ${BASEDIR}
 echo
 echo "*** Downloading binary wt from ${URL}"
-curl ${URL} --output ${BASEDIR}/${FILE}
+curl --location ${URL} --output ${BASEDIR}/${FILE}
 
 cd ${BASEDIR}
 echo

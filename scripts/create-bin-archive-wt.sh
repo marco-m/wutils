@@ -10,7 +10,7 @@ set -o errexit
 VERSION=3.3.2
 SHA256="4c782f1ac335b770bc5b26f89814645264c7e6da32d56454707ab4acabaad827  wt-3.3.2.tar.gz"
 FILE=wt-${VERSION}.tar.gz
-URL=http://freefr.dl.sourceforge.net/project/witty/wt/${VERSION}/${FILE}
+URL=http://sourceforge.net/project/witty/wt/${VERSION}/${FILE}/download
 BASEDIR=wt-download
 SRCDIR=wt-${VERSION}
 BIN_ARCHIVE=wt-${VERSION}-bin-ubu-1204.7z
@@ -19,7 +19,7 @@ echo "*** Working directory: `pwd`"
 
 mkdir -p ${BASEDIR}
 echo "*** Downloading wt from ${URL}"
-curl ${URL} --output ${BASEDIR}/${FILE}
+curl --location ${URL} --output ${BASEDIR}/${FILE}
 
 cd ${BASEDIR}
 echo "*** Checking shasum"

@@ -5,7 +5,7 @@ set -o errexit
 VERSION=1.7.0
 SHA256="dad994e39d898333cd3e236e34e05ad6c7c37f8d3d1718d5e105c47c32735c29  gmock-1.7.0-bin-ubu-1204.7z"
 FILE=gmock-${VERSION}-bin-ubu-1204.7z
-URL=http://freefr.dl.sourceforge.net/project/wutils/travis-ci/${FILE}
+URL=http://sourceforge.net/projects/wutils/files/travis-ci/${FILE}/download
 BASEDIR=gmock-download
 SRCDIR=gmock-${VERSION}
 
@@ -15,10 +15,9 @@ echo "*** Working directory: `pwd`"
 mkdir -p ${BASEDIR}
 echo
 echo "*** Downloading binary gmock/gtest from ${URL}"
-curl ${URL} --output ${BASEDIR}/${FILE}
+curl --location ${URL} --output ${BASEDIR}/${FILE}
 
 cd ${BASEDIR}
-# Also if https, we check the shasum
 echo
 echo "*** Checking shasum"
 echo "${SHA256}" > sum

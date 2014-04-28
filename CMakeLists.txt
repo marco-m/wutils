@@ -20,12 +20,6 @@ list(APPEND CMAKE_LIBRARY_PATH ${WT_DIR} ${GMOCK_DIR})
 # Where to pick up our finders.
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
-if(CMAKE_CXX_COMPILER_ID STREQUAL GNU)
-    message(STATUS "Using C++ compiler: g++ ${CMAKE_CXX_COMPILER_VERSION}")
-endif()
-if(CMAKE_CXX_COMPILER_ID STREQUAL Clang)
-    message(STATUS "Using C++ compiler: clang++ ${CMAKE_CXX_COMPILER_VERSION}")
-endif()
 #
 # Check if the compiler supports C++11 and fail if not.
 #
@@ -61,8 +55,7 @@ endif()
 
 #
 # Find Boost (needed by Wt).
-# the old 1.46.1 is the latest supported by Travis.
-find_package(Boost 1.46.1 REQUIRED COMPONENTS signals system)
+find_package(Boost 1.54.0 REQUIRED COMPONENTS signals system regex)
 include_directories(${Boost_INCLUDE_DIRS})
 
 #
@@ -95,14 +88,15 @@ include_directories(${CMAKE_SOURCE_DIR})
 #add_library(wutils
 #)
 
+# Show the include files in an IDE.
+add_custom_target(dummy SOURCES src/urlrouter.hpp)
+
 #
 # Build tests.
 #
 add_subdirectory(test)
 
 message(STATUS "Exiting project ${PROJECT_NAME}")
-
- down vote accepted
 
 # http://stackoverflow.com/questions/8454329/why-cant-clang-with-libc-in-c0x-mode-link-this-boostprogram-options-examp
 #
